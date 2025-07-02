@@ -1,9 +1,9 @@
-from scraper.scrape import CourseScraper
+from src.scraper.scrape import CourseScraper
 import json
-from json2md.converter import Converter
-from scraper.scrape import PaperScraper
-from ocr.question2text import Question2Text
-from classifier.classify import Classifier
+from src.json2md.converter import Converter
+from src.scraper.scrape import PaperScraper
+from src.ocr.question2text import Question2Text
+from src.classifier.classify import Classifier
 from rich.prompt import Prompt
 from rich.console import Console
 from rich.live import Live

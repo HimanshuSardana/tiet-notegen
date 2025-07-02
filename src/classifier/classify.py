@@ -28,6 +28,7 @@ class Classifier:
             "- Do NOT wrap the output in triple backticks or provide any explanation. Output only valid, complete JSON.\n\n"
             "- Order the topics into the order they must be studied in.\n"
             "- Escape quotes in the question text.\n"
+            "- For questions involving math, enclose the math expressions in dollar signs (e.g. $x^2 + y^2 = z^2$).\n\n"
             "Format example:\n"
             "{\n"
             "  \"Topic A\": [\"What is memory management?\", \"Explain paging.\\nExplain segmentation.\"],\n"
