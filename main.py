@@ -158,6 +158,8 @@ with Progress(
 console.print("[bold green]Classification completed![/bold green]")
 
 converter = Converter(f"./output/{clean_course_name}/classified_questions.json", f"./output/{clean_course_name}/classified_questions.md")
-markdown_content = converter.convert_json()
-console.print(f"[bold green]Converted JSON to Markdown:[/bold green] {converter.markdown_file_path}")
+# markdown_content = converter.convert_json()
+# console.print(f"[bold green]Converted JSON to Markdown:[/bold green] {converter.markdown_file_path}")
+
+converter.convert_to_typst(f"./output/{clean_course_name}/classified_questions.typ")
 
