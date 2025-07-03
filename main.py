@@ -111,7 +111,7 @@ with Progress(
             console.print(f"[red]Failed to download:[/red] {filename} — {str(e)}")
             progress.update(download_task, advance=1)  # Still advance to not freeze
 
-console.print(f"\n[bold green]Downloaded papers saved to:[/bold green] {download_dir}")
+console.print(f"[bold green]Downloaded papers saved to:[/bold green] {download_dir}")
 
 question_to_text = Question2Text(question_papers_dir, text_files_dir)
 
