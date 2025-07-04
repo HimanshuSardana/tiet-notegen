@@ -15,7 +15,11 @@ class Converter:
             return json.load(json_file)
 
     def convert_to_typst(self, output_path: str = 'output.typ'):
-        typst_code = ""
+        typst_code = """
+        #let question(body) = [
+            #body
+        ]\n
+        """
         with open(self.json_file_path, 'r', encoding='utf-8') as file:
             data = demjson3.decode(file.read())
 
