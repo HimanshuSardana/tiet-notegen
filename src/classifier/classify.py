@@ -13,12 +13,12 @@ class Classifier:
         self.client = genai.Client(api_key=API_KEY)
         self.model_name = model_name
 
-    def build_prompt(self, content: str, final_data: dict) -> str:
+    def build_prompt(self, content: str, final_data: list) -> str:
         return (
             "You are an assistant that classifies university exam questions into topics.\n"
             "You will be given:\n"
             "1. A new question paper.\n"
-            "2. The current JSON structure of previously classified questions.\n\n"
+            "2. The current list of topics (as JSON).\n\n"
             "Your task is to update the JSON with the new questions. Follow these rules:\n"
             "- Merge similar topics into a single topic key.\n"
             "- Some questions may refer to figures or diagrams. If so, rephrase them to be self-contained without referring to any figure.\n"
@@ -58,26 +58,42 @@ class Classifier:
             return {}
 
     def classify_questions(self, text_files_dir: str):
-        final_data = {}
+        final_data = set()
 
-        for filename in os.listdir(text_files_dir):
+        for idx, filename in enumerate(os.listdir(text_files_dir)):
             if filename.endswith(".txt"):
                 with open(os.path.join(text_files_dir, filename), "r", encoding="utf-8") as file:
                     content = file.read()
-                    prompt = self.build_prompt(content, final_data)
+                    prompt = self.build_prompt(content, list(final_data.keys()))
                     response_text = self.generate_text(prompt)
                     new_data = self.clean_json(response_text)
 
-                    for topic, questions in new_data.items():
-                        if topic not in final_data:
-                            final_data[topic] = []
-                        for q in questions:
-                            if q not in final_data[topic]:  # deduplication
-                                final_data[topic].append(q)
+                    with open(f"./output/classified_questions_{str(idx)}.json", "w", encoding="utf-8") as outfile:
+                        json.dump(new_data, outfile, indent=2, ensure_ascii=False)
 
-                json.dump(final_data, open("./output/classified_questions.json", "w", encoding="utf-8"), indent=2, ensure_ascii=False)
-                # print(f"Processed file: {filename}")
-                # print(final_data)
+                final_data.update(new_data.keys())
 
-        return final_data
+        # final_data = list of keys
+        #
+        #
+        # for filename in os.listdir(text_files_dir):
+        #     if filename.endswith(".txt"):
+        #         with open(os.path.join(text_files_dir, filename), "r", encoding="utf-8") as file:
+        #             content = file.read()
+        #             prompt = self.build_prompt(content, final_data)
+        #             response_text = self.generate_text(prompt)
+        #             new_data = self.clean_json(response_text)
+        #
+        #             for topic, questions in new_data.items():
+        #                 if topic not in final_data:
+        #                     final_data[topic] = []
+        #                 for q in questions:
+        #                     if q not in final_data[topic]:  # deduplication
+        #                         final_data[topic].append(q)
+        #
+        #         json.dump(final_data, open("./output/classified_questions.json", "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+        #         # print(f"Processed file: {filename}")
+        #         # print(final_data)
+        #
+        # return final_data
 
