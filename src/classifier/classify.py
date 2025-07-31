@@ -21,6 +21,7 @@ class Classifier:
             "2. The current list of topics (as JSON).\n\n"
             "Your task is to update the JSON with the new questions. Follow these rules:\n"
             "- Keep the existing topics in the JSON.\n"
+            "- Keep the topics as specific as possible.\n"
             "- Try to classify the questions into existing topics.\n"
             "- Merge similar topics into a single topic key.\n"
             "- Some questions may refer to figures or diagrams. If so, rephrase them to be self-contained without referring to any figure.\n"
