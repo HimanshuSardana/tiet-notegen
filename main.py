@@ -168,6 +168,22 @@ with Progress(
     #     json.dump(final_data, open(f"./output/{clean_course_name}/classified_questions.json", "w", encoding="utf-8"), indent=2, ensure_ascii=False)
         progress.update(classify_task, advance=1)
 
+    # Merge json files to a single file
+    combined_data = {}
+    for filename in os.listdir(f"./output/{clean_course_name}"):
+        if filename.endswith(".json") and "classified_questions_" in filename:
+            with open(os.path.join(f"./output/{clean_course_name}", filename), "r", encoding="utf-8") as file:
+                data = json.load(file)
+                for topic, questions in data.items():
+                    if topic not in combined_data:
+                        combined_data[topic] = []
+                    for q in questions:
+                        if q not in combined_data[topic]:
+                            combined_data[topic].append(q)
+
+    with open(f"./output/{clean_course_name}/classified_questions.json", "w", encoding="utf-8") as outfile:
+        json.dump(combined_data, outfile, indent=2, ensure_ascii=False)
+
 console.print("[bold green]Classification completed![/bold green]")
 
 converter = Converter(f"./output/{clean_course_name}/classified_questions.json", f"./output/{clean_course_name}/classified_questions.md")
