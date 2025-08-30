@@ -16,14 +16,20 @@ class Converter:
 
     def convert_to_typst(self, output_path: str = 'output.typ'):
         typst_code = ""
+        typst_code += """
+        #let question(body) = [
+            #body
+        ]
+        """
         with open(self.json_file_path, 'r', encoding='utf-8') as file:
             data = demjson3.decode(file.read())
 
             for key, value in data.items():
                 typst_code += f"#smallcaps()[== {key}]\n#line(length: 100%, stroke: 0.3pt)\n"
                 for question in value:
-                    escaped = json.dumps(question)[1:-1]  # escape quotes and slashes
-                    typst_code += f'+ #question("{escaped}")\n\n'
+                    escaped = json.dumps(question.replace("\\n", "\n"))[1:-1]  # escape quotes and slashes
+                    escaped = escaped.encode("utf-8").decode("unicode_escape")
+                    typst_code += f'+ #question()[{escaped}]\n\n'
 
         with open(output_path, 'w') as output_file:
             output_file.write(typst_code)

@@ -137,23 +137,52 @@ with Progress(
 ) as progress:
     classify_task = progress.add_task("[cyan]Classifying questions...", total=len(text_files))
 
-    final_data = {}
-    for filename in text_files:
+    final_data = set()
+    for idx, filename in enumerate(text_files):
         with open(os.path.join(text_files_dir, filename), "r", encoding="utf-8") as file:
             content = file.read()
-            prompt = classifier.build_prompt(content, final_data)
+            prompt = classifier.build_prompt(content, list(final_data))
             response_text = classifier.generate_text(prompt)
             new_data = classifier.clean_json(response_text)
 
-            for topic, questions in new_data.items():
-                if topic not in final_data:
-                    final_data[topic] = []
-                for q in questions:
-                    if q not in final_data[topic]:
-                        final_data[topic].append(q)
+            final_data.update(new_data.keys())
 
-        json.dump(final_data, open(f"./output/{clean_course_name}/classified_questions.json", "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+            # Save each classified data to a separate JSON file
+            with open(f"./output/{clean_course_name}/classified_questions_{str(idx).zfill(3)}.json", "w", encoding="utf-8") as outfile:
+                json.dump(new_data, outfile, indent=2, ensure_ascii=False)
+    # final_data = {}
+    # for filename in text_files:
+    #     with open(os.path.join(text_files_dir, filename), "r", encoding="utf-8") as file:
+    #         content = file.read()
+    #         prompt = classifier.build_prompt(content, final_data)
+    #         response_text = classifier.generate_text(prompt)
+    #         new_data = classifier.clean_json(response_text)
+    #
+    #         for topic, questions in new_data.items():
+    #             if topic not in final_data:
+    #                 final_data[topic] = []
+    #             for q in questions:
+    #                 if q not in final_data[topic]:
+    #                     final_data[topic].append(q)
+    #
+    #     json.dump(final_data, open(f"./output/{clean_course_name}/classified_questions.json", "w", encoding="utf-8"), indent=2, ensure_ascii=False)
         progress.update(classify_task, advance=1)
+
+    # Merge json files to a single file
+    combined_data = {}
+    for filename in os.listdir(f"./output/{clean_course_name}"):
+        if filename.endswith(".json") and "classified_questions_" in filename:
+            with open(os.path.join(f"./output/{clean_course_name}", filename), "r", encoding="utf-8") as file:
+                data = json.load(file)
+                for topic, questions in data.items():
+                    if topic not in combined_data:
+                        combined_data[topic] = []
+                    for q in questions:
+                        if q not in combined_data[topic]:
+                            combined_data[topic].append(q)
+
+    with open(f"./output/{clean_course_name}/classified_questions.json", "w", encoding="utf-8") as outfile:
+        json.dump(combined_data, outfile, indent=2, ensure_ascii=False)
 
 console.print("[bold green]Classification completed![/bold green]")
 
