@@ -13,6 +13,7 @@ from rich.progress import Progress
 import requests
 import os
 from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn, SpinnerColumn
+from src.merger import Merger
 
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -145,7 +146,13 @@ with Progress(
             response_text = classifier.generate_text(prompt)
             new_data = classifier.clean_json(response_text)
 
-            final_data.update(new_data.keys())
+            if new_data:
+                if isinstance(new_data, dict):
+                    final_data.update(new_data)
+                elif isinstance(new_data, list):
+                    for item in new_data:
+                        if isinstance(item, dict):
+                            final_data.update(item)
 
             # Save each classified data to a separate JSON file
             with open(f"./output/{clean_course_name}/classified_questions_{str(idx).zfill(3)}.json", "w", encoding="utf-8") as outfile:
@@ -186,9 +193,16 @@ with Progress(
 
 console.print("[bold green]Classification completed![/bold green]")
 
-converter = Converter(f"./output/{clean_course_name}/classified_questions.json", f"./output/{clean_course_name}/classified_questions.md")
+merger = Merger(f"./output/{clean_course_name}/classified_questions.json", model_name="gemini-2.5-flash-lite")
+merger.load_data()
+cleaned_data = merger.merge_data()
+print(f"json.dumps(cleaned_data, ensure_ascii=False, indent=2)")
+
+with open(f"./output/{clean_course_name}/merged_questions.json", "w", encoding="utf-8") as outfile:
+    json.dump(cleaned_data, outfile, indent=2, ensure_ascii=False)
+
+converter = Converter(f"./output/{clean_course_name}/merged_questions.json", f"./output/{clean_course_name}/merged_questions.md")
 # markdown_content = converter.convert_json()
 # console.print(f"[bold green]Converted JSON to Markdown:[/bold green] {converter.markdown_file_path}")
 
-converter.convert_to_typst(f"./output/{clean_course_name}/classified_questions.typ")
-
+converter.convert_to_typst(f"./output/{clean_course_name}/final_questions.typ")
