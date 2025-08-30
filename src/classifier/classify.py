@@ -2,6 +2,7 @@ import os
 import json
 from google import genai
 from dotenv import load_dotenv
+import time
 import demjson3
 
 load_dotenv()
@@ -20,6 +21,7 @@ class Classifier:
             "1. A new question paper.\n"
             "2. The current list of topics (as JSON).\n\n"
             "Your task is to update the JSON with the new questions. Follow these rules:\n"
+            "- Be extremely specific with the topics.\n"
             "- Keep the existing topics in the JSON.\n"
             "- Keep the topics as specific as possible.\n"
             "- Try to classify the questions into existing topics.\n"
@@ -74,7 +76,10 @@ class Classifier:
                     with open(f"./output/classified_questions_{str(idx)}.json", "w", encoding="utf-8") as outfile:
                         json.dump(new_data, outfile, indent=2, ensure_ascii=False)
 
-                final_data.update(new_data.keys())
+                # if final data is not empty
+                if final_data:
+                    final_data.update(new_data.keys())
+            time.sleep(2) 
 
         # final_data = list of keys
         #
