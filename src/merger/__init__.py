@@ -44,7 +44,6 @@ class Merger:
         except demjson3.JSONDecodeError as e:
             print(f"[!] Failed to decode response: {e}")
             return {}
-
     
     def merge_data(self):
         prompt = f"""
@@ -75,5 +74,11 @@ class Merger:
         time.sleep(2)
         return self.cleaned_data
 
-
+if __name__ == "__main__":
+    merger = Merger(json_path="../../output/MACHINE_LEARNING/classified_questions.json")
+    merger.load_data()
+    merged_data = merger.merge_data()
+    with open("merged_questions.json", "w", encoding="utf-8") as f:
+        json.dump(merged_data, f, ensure_ascii=False, indent=4)
+    print("Merged data saved to merged_questions.json")
 

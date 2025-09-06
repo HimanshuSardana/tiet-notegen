@@ -58,16 +58,12 @@ class Classifier:
                 return response.text  # or whatever attribute your SDK returns
 
             except genai_errors.ServerError as e:
-                if e.status_code == 503:
-                    wait_time = base_delay * attempt
-                    logging.warning(
-                        f"⚠️ Model overloaded (503). Attempt {attempt}/{max_retries}. "
-                        f"Retrying in {wait_time}s..."
-                    )
-                    time.sleep(wait_time)
-                else:
-                    logging.error(f"❌ Non-retryable server error: {e}")
-                    raise
+                wait_time = base_delay * attempt
+                logging.warning(
+                    f"⚠️ Model overloaded (503). Attempt {attempt}/{max_retries}. "
+                    f"Retrying in {wait_time}s..."
+                )
+                time.sleep(wait_time)
 
             except Exception as e:
                 logging.error(f"❌ Unexpected error in generate_text: {e}")

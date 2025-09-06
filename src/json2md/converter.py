@@ -31,17 +31,21 @@ class Converter:
                     escaped = escaped.encode("utf-8").decode("unicode_escape")
                     typst_code += f'+ #question()[{escaped}]\n\n'
 
-        with open(output_path, 'w') as output_file:
+        with open(output_path, 'w', encoding='utf-8', errors='replace') as output_file:
             output_file.write(typst_code)
 
     def convert_json(self):
         """
         Converts the loaded JSON data into Markdown
         """
-        with open(self.markdown_file_path, 'w', encoding='utf-8') as md_file:
+        with open(self.markdown_file_path, 'w', encoding='utf-8', errors='replace') as md_file:
             for topic, questions in self.data.items():
                 md_file.write(f"## {topic}\n\n")
                 for question in questions:
                     md_file.write(f"- {question}\n")
                 md_file.write("\n")
 
+if __name__ == "__main__":
+    converter = Converter(json_file_path='../merger/merged_questions.json', markdown_file_path='output.md')
+    converter.convert_json()
+    converter.convert_to_typst(output_path='output.typ')
