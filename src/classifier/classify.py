@@ -1,9 +1,11 @@
 import os
+import logging
 import json
 from google import genai
 from dotenv import load_dotenv
 import time
 import demjson3
+from google.genai import errors as genai_errors
 
 load_dotenv()
 
@@ -21,7 +23,7 @@ class Classifier:
             "1. A new question paper.\n"
             "2. The current list of topics (as JSON).\n\n"
             "Your task is to update the JSON with the new questions. Follow these rules:\n"
-            "- Be extremely specific with the topics.\n"
+            "- Be extremely spe"
             "- Keep the existing topics in the JSON.\n"
             "- Keep the topics as specific as possible.\n"
             "- Try to classify the questions into existing topics.\n"
@@ -43,12 +45,37 @@ class Classifier:
             f"Current JSON:\n{json.dumps(final_data, indent=2, ensure_ascii=False)}\n"
         )
 
-    def generate_text(self, prompt: str) -> str:
-        response = self.client.models.generate_content(
-            model=self.model_name,
-            contents=prompt,
-        )
-        return response.text
+    def generate_text(self, prompt, max_retries=5, base_delay=5):
+        """
+        Call Google GenAI with retries/backoff for transient errors like 503.
+        """
+        for attempt in range(1, max_retries + 1):
+            try:
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt,
+                )
+                return response.text  # or whatever attribute your SDK returns
+
+            except genai_errors.ServerError as e:
+                if e.status_code == 503:
+                    wait_time = base_delay * attempt
+                    logging.warning(
+                        f"⚠️ Model overloaded (503). Attempt {attempt}/{max_retries}. "
+                        f"Retrying in {wait_time}s..."
+                    )
+                    time.sleep(wait_time)
+                else:
+                    logging.error(f"❌ Non-retryable server error: {e}")
+                    raise
+
+            except Exception as e:
+                logging.error(f"❌ Unexpected error in generate_text: {e}")
+                raise
+
+        # If all retries fail:
+        raise RuntimeError(f"Failed to get response from model after {max_retries} retries")
+
 
     def clean_json(self, json_data: str):
         json_data = json_data.strip()
@@ -62,46 +89,44 @@ class Classifier:
             print(f"[!] Failed to decode response: {e}")
             return {}
 
-    def classify_questions(self, text_files_dir: str):
+    def classify_questions(self, text_files_dir: str, max_retries: int = 3, delay: int = 2):
         final_data = set()
+        os.makedirs("./output", exist_ok=True)
 
         for idx, filename in enumerate(os.listdir(text_files_dir)):
-            if filename.endswith(".txt"):
-                with open(os.path.join(text_files_dir, filename), "r", encoding="utf-8") as file:
+            if not filename.endswith(".txt"):
+                continue
+
+            filepath = os.path.join(text_files_dir, filename)
+            try:
+                with open(filepath, "r", encoding="utf-8") as file:
                     content = file.read()
-                    prompt = self.build_prompt(content, list(final_data.keys()))
+            except Exception as e:
+                logging.error(f"❌ Failed to read {filepath}: {e}")
+                continue
+
+            # Retry loop for API / parsing
+            for attempt in range(1, max_retries + 1):
+                try:
+                    prompt = self.build_prompt(content, list(final_data))
                     response_text = self.generate_text(prompt)
                     new_data = self.clean_json(response_text)
 
-                    with open(f"./output/classified_questions_{str(idx)}.json", "w", encoding="utf-8") as outfile:
+                    output_path = f"./output/classified_questions_{idx}.json"
+                    with open(output_path, "w", encoding="utf-8") as outfile:
                         json.dump(new_data, outfile, indent=2, ensure_ascii=False)
 
-                # if final data is not empty
-                if final_data:
-                    final_data.update(new_data.keys())
-            time.sleep(2) 
+                    if final_data:
+                        final_data.update(new_data.keys())
 
-        # final_data = list of keys
-        #
-        #
-        # for filename in os.listdir(text_files_dir):
-        #     if filename.endswith(".txt"):
-        #         with open(os.path.join(text_files_dir, filename), "r", encoding="utf-8") as file:
-        #             content = file.read()
-        #             prompt = self.build_prompt(content, final_data)
-        #             response_text = self.generate_text(prompt)
-        #             new_data = self.clean_json(response_text)
-        #
-        #             for topic, questions in new_data.items():
-        #                 if topic not in final_data:
-        #                     final_data[topic] = []
-        #                 for q in questions:
-        #                     if q not in final_data[topic]:  # deduplication
-        #                         final_data[topic].append(q)
-        #
-        #         json.dump(final_data, open("./output/classified_questions.json", "w", encoding="utf-8"), indent=2, ensure_ascii=False)
-        #         # print(f"Processed file: {filename}")
-        #         # print(final_data)
-        #
-        # return final_data
+                    logging.info(f"✅ Processed {filename} -> {output_path}")
+                    break  # success, exit retry loop
 
+                except Exception as e:
+                    logging.warning(f"⚠️ Error processing {filename} (attempt {attempt}/{max_retries}): {e}")
+                    if attempt < max_retries:
+                        time.sleep(delay * attempt)  # exponential-ish backoff
+                    else:
+                        logging.error(f"❌ Giving up on {filename} after {max_retries} attempts")
+
+            time.sleep(2)  # prevent rate limiting
