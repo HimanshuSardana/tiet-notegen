@@ -12,13 +12,14 @@ from rich.table import Table
 from rich.progress import Progress
 import requests
 import os
-from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn, SpinnerColumn
+from rich.progress import BarColumn, TextColumn, TimeRemainingColumn, SpinnerColumn
 from src.merger import Merger
 
 import urllib3
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-question_papers_dir = f"./output/question_papers/COMPUTER_NETWORKS/"
+question_papers_dir = "./output/question_papers/COMPUTER_NETWORKS/"
 text_files_dir = "./output/text_files/COMPUTER_NETWORKS/"
 
 console = Console()
@@ -45,7 +46,7 @@ else:
 course_index = Prompt.ask("Enter index of the course you want to scrape", default="1")
 course_name = courses[int(course_index) - 1]
 
-clean_course_name = course_name.replace(' ', '_')
+clean_course_name = course_name.replace(" ", "_")
 
 scraper = PaperScraper(course_name)
 
@@ -59,7 +60,9 @@ else:
     if not papers:
         console.print("[bold red]No papers found for the selected course.[/bold red]")
     else:
-        console.print(f"[bold green]Found {len(papers)} papers for {course_name}[/bold green]")
+        console.print(
+            f"[bold green]Found {len(papers)} papers for {course_name}[/bold green]"
+        )
 
     """
     'subject_code': subject_code,
@@ -70,7 +73,6 @@ else:
     'link': 'http://cl.thapar.edu/' + link
     """
 
-    # make table
     table = Table(title=f"Papers for [bold]{course_name}[/bold]")
     table.add_column("Subject Code", style="cyan")
     table.add_column("Subject Name", style="magenta")
@@ -89,7 +91,7 @@ with Progress(
     BarColumn(),
     TextColumn("{task.completed}/{task.total}"),
     TimeRemainingColumn(),
-    console=console
+    console=console,
 ) as progress:
     download_task = progress.add_task("[cyan]Downloading papers...", total=len(papers))
 
@@ -116,15 +118,28 @@ console.print(f"[bold green]Downloaded papers saved to:[/bold green] {download_d
 
 question_to_text = Question2Text(question_papers_dir, text_files_dir)
 
-with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), BarColumn(), TextColumn("{task.completed}/{task.total}"), TimeRemainingColumn(), console=console) as progress:
-    convert_task = progress.add_task("[cyan]Converting PDFs to text...", total=len(os.listdir(question_papers_dir)))
+with Progress(
+    SpinnerColumn(),
+    TextColumn("[progress.description]{task.description}"),
+    BarColumn(),
+    TextColumn("{task.completed}/{task.total}"),
+    TimeRemainingColumn(),
+    console=console,
+) as progress:
+    convert_task = progress.add_task(
+        "[cyan]Converting PDFs to text...", total=len(os.listdir(question_papers_dir))
+    )
     question_to_text.convert_pdfs_to_text()
     progress.update(convert_task, advance=len(os.listdir(question_papers_dir)))
 
-console.print(f"[bold green]Converted PDFs to text files in:[/bold green] {text_files_dir}")
+console.print(
+    f"[bold green]Converted PDFs to text files in:[/bold green] {text_files_dir}"
+)
 
 classifier = Classifier()
-text_files = [filename for filename in os.listdir(text_files_dir) if filename.endswith(".txt")]
+text_files = [
+    filename for filename in os.listdir(text_files_dir) if filename.endswith(".txt")
+]
 
 os.makedirs(f"./output/{clean_course_name}", exist_ok=True)
 
@@ -134,13 +149,17 @@ with Progress(
     BarColumn(),
     TextColumn("{task.completed}/{task.total}"),
     TimeRemainingColumn(),
-    console=console
+    console=console,
 ) as progress:
-    classify_task = progress.add_task("[cyan]Classifying questions...", total=len(text_files))
+    classify_task = progress.add_task(
+        "[cyan]Classifying questions...", total=len(text_files)
+    )
 
     final_data = set()
     for idx, filename in enumerate(text_files):
-        with open(os.path.join(text_files_dir, filename), "r", encoding="utf-8") as file:
+        with open(
+            os.path.join(text_files_dir, filename), "r", encoding="utf-8"
+        ) as file:
             content = file.read()
             prompt = classifier.build_prompt(content, list(final_data))
             response_text = classifier.generate_text(prompt)
@@ -155,31 +174,39 @@ with Progress(
                             final_data.update(item)
 
             # Save each classified data to a separate JSON file
-            with open(f"./output/{clean_course_name}/classified_questions_{str(idx).zfill(3)}.json", "w", encoding="utf-8") as outfile:
+            with open(
+                f"./output/{clean_course_name}/classified_questions_{str(idx).zfill(3)}.json",
+                "w",
+                encoding="utf-8",
+            ) as outfile:
                 json.dump(new_data, outfile, indent=2, ensure_ascii=False)
-    # final_data = {}
-    # for filename in text_files:
-    #     with open(os.path.join(text_files_dir, filename), "r", encoding="utf-8") as file:
-    #         content = file.read()
-    #         prompt = classifier.build_prompt(content, final_data)
-    #         response_text = classifier.generate_text(prompt)
-    #         new_data = classifier.clean_json(response_text)
-    #
-    #         for topic, questions in new_data.items():
-    #             if topic not in final_data:
-    #                 final_data[topic] = []
-    #             for q in questions:
-    #                 if q not in final_data[topic]:
-    #                     final_data[topic].append(q)
-    #
-    #     json.dump(final_data, open(f"./output/{clean_course_name}/classified_questions.json", "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+        # final_data = {}
+        # for filename in text_files:
+        #     with open(os.path.join(text_files_dir, filename), "r", encoding="utf-8") as file:
+        #         content = file.read()
+        #         prompt = classifier.build_prompt(content, final_data)
+        #         response_text = classifier.generate_text(prompt)
+        #         new_data = classifier.clean_json(response_text)
+        #
+        #         for topic, questions in new_data.items():
+        #             if topic not in final_data:
+        #                 final_data[topic] = []
+        #             for q in questions:
+        #                 if q not in final_data[topic]:
+        #                     final_data[topic].append(q)
+        #
+        #     json.dump(final_data, open(f"./output/{clean_course_name}/classified_questions.json", "w", encoding="utf-8"), indent=2, ensure_ascii=False)
         progress.update(classify_task, advance=1)
 
     # Merge json files to a single file
     combined_data = {}
     for filename in os.listdir(f"./output/{clean_course_name}"):
         if filename.endswith(".json") and "classified_questions_" in filename:
-            with open(os.path.join(f"./output/{clean_course_name}", filename), "r", encoding="utf-8") as file:
+            with open(
+                os.path.join(f"./output/{clean_course_name}", filename),
+                "r",
+                encoding="utf-8",
+            ) as file:
                 data = json.load(file)
                 for topic, questions in data.items():
                     if topic not in combined_data:
@@ -188,20 +215,30 @@ with Progress(
                         if q not in combined_data[topic]:
                             combined_data[topic].append(q)
 
-    with open(f"./output/{clean_course_name}/classified_questions.json", "w", encoding="utf-8") as outfile:
+    with open(
+        f"./output/{clean_course_name}/classified_questions.json", "w", encoding="utf-8"
+    ) as outfile:
         json.dump(combined_data, outfile, indent=2, ensure_ascii=False)
 
 console.print("[bold green]Classification completed![/bold green]")
 
-merger = Merger(f"./output/{clean_course_name}/classified_questions.json", model_name="gemini-2.5-flash-lite")
+merger = Merger(
+    f"./output/{clean_course_name}/classified_questions.json",
+    model_name="gemini-2.5-flash-lite",
+)
 merger.load_data()
 cleaned_data = merger.merge_data()
-print(f"json.dumps(cleaned_data, ensure_ascii=False, indent=2)")
+print("json.dumps(cleaned_data, ensure_ascii=False, indent=2)")
 
-with open(f"./output/{clean_course_name}/merged_questions.json", "w", encoding="utf-8") as outfile:
+with open(
+    f"./output/{clean_course_name}/merged_questions.json", "w", encoding="utf-8"
+) as outfile:
     json.dump(cleaned_data, outfile, indent=2, ensure_ascii=False)
 
-converter = Converter(f"./output/{clean_course_name}/merged_questions.json", f"./output/{clean_course_name}/merged_questions.md")
+converter = Converter(
+    f"./output/{clean_course_name}/merged_questions.json",
+    f"./output/{clean_course_name}/merged_questions.md",
+)
 # markdown_content = converter.convert_json()
 # console.print(f"[bold green]Converted JSON to Markdown:[/bold green] {converter.markdown_file_path}")
 
