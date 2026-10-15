@@ -1,19 +1,13 @@
-import os
 import logging
 import json
-from google import genai
-from dotenv import load_dotenv
+import os
 import time
 import demjson3
-from google.genai import errors as genai_errors
 
-load_dotenv()
-
-API_KEY = os.getenv("GEMINI_API_KEY")
+from src.llm.client import DEFAULT_MODEL, generate_text as _generate_text
 
 class Classifier:
-    def __init__(self, model_name: str = "gemini-2.5-flash"):
-        self.client = genai.Client(api_key=API_KEY)
+    def __init__(self, model_name: str = DEFAULT_MODEL):
         self.model_name = model_name
 
     def build_prompt(self, content: str, final_data: list) -> str:
@@ -49,30 +43,15 @@ class Classifier:
 
     def generate_text(self, prompt, max_retries=5, base_delay=5):
         """
-        Call Google GenAI with retries/backoff for transient errors like 503.
+        Call the opencode Go API (OpenAI-compatible) with retries/backoff
+        for transient errors like 429/5xx.
         """
-        for attempt in range(1, max_retries + 1):
-            try:
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt,
-                )
-                return response.text  # or whatever attribute your SDK returns
-
-            except genai_errors.ServerError as e:
-                wait_time = base_delay * attempt
-                logging.warning(
-                    f"⚠️ Model overloaded (503). Attempt {attempt}/{max_retries}. "
-                    f"Retrying in {wait_time}s..."
-                )
-                time.sleep(wait_time)
-
-            except Exception as e:
-                logging.error(f"❌ Unexpected error in generate_text: {e}")
-                raise
-
-        # If all retries fail:
-        raise RuntimeError(f"Failed to get response from model after {max_retries} retries")
+        return _generate_text(
+            prompt,
+            model=self.model_name,
+            max_retries=max_retries,
+            base_delay=base_delay,
+        )
 
 
     def clean_json(self, json_data: str):
