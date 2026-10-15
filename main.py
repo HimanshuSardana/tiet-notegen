@@ -224,7 +224,7 @@ console.print("[bold green]Classification completed![/bold green]")
 
 merger = Merger(
     f"./output/{clean_course_name}/classified_questions.json",
-    model_name="gemini-2.5-flash-lite",
+    model_name="deepseek-v4.1-flash",
 )
 merger.load_data()
 cleaned_data = merger.merge_data()

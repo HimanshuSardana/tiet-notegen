@@ -1,20 +1,14 @@
 import os
 import time
-import google.genai
 import json
-from dotenv import load_dotenv
-from google import genai
 import demjson3
 
-load_dotenv()
-
-API_KEY = os.getenv("GEMINI_API_KEY")
+from src.llm.client import DEFAULT_MODEL, generate_text as _generate_text
 
 class Merger:
-    def __init__(self, json_path, model_name: str = "gemini-2.5-flash"):
+    def __init__(self, json_path, model_name: str = DEFAULT_MODEL):
         self.json_path = json_path
         self.model_name = model_name
-        self.client = genai.Client(api_key=API_KEY)
         self.cleaned_data = {}
         self.data = {}
 
@@ -27,11 +21,7 @@ class Merger:
         return self.data
 
     def generate_text(self, prompt: str) -> str:
-        response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=prompt,
-                )
-        return response.text
+        return _generate_text(prompt, model=self.model_name)
 
     def clean_json(self, json_data: str):
         json_data = json_data.strip()
